@@ -1,0 +1,91 @@
+esphome:
+  name: ipixel-esphome
+  friendly_name: iPixel Matrix Bridge
+  includes:
+    - ipixel_ble_writer.h
+    - ipixel_text.h
+    - ipixel_text_v2.h
+    - Font.h
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+  level: DEBUG
+
+api:
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "ipixel-esphome"
+    password: "ipixel_fallback"
+
+mqtt:
+  broker: !secret mqtt_broker
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  client_id: ipixel-esphome
+  discovery: true
+  discovery_retain: false
+  topic_prefix: ipixel-esphome
+  log_topic: ipixel-esphome/debug
+  birth_message:
+    topic: ipixel/matrix1/status
+    payload: online
+  will_message:
+    topic: ipixel/matrix1/status
+    payload: offline
+
+esp32_ble:
+
+ble_client:
+  - id: ble_matrix
+    mac_address: !secret ipixel_ble_mac
+    auto_connect: false
+    on_connect:
+      then:
+        - lambda: |-
+            ESP_LOGI("ipixel_ble", "Connected");
+            id(ipixel_ble_error_count) = 0;
+            id(ipixel_ble_desired_connected) = true;
+    on_disconnect:
+      then:
+        - lambda: |-
+            ESP_LOGW("ipixel_ble", "Disconnected");
+            id(ipixel_ble_desired_connected) = false;
+
+esp32_ble_tracker:
+  scan_parameters:
+    duration: 300s
+    interval: 320ms
+    window: 30ms
+    active: true
+
+time:
+  - platform: homeassistant
+    id: esptime
+
+web_server:
+  port: 80
+
+captive_portal:
+
+# ---- PACKAGES ----
+packages:
+  globals: !include globals.yaml
+  scripts: !include scripts.yaml
+  mqtt_text: !include mqtt_text.yaml
+  mqtt_power: !include mqtt_power.yaml
+  mqtt_brightness: !include mqtt_brightness.yaml
+  mqtt_png: !include mqtt_png.yaml
+  mqtt_clock: !include mqtt_clock.yaml
+  mqtt_clock_sync: !include mqtt_clock_sync.yaml
+  mqtt_ble: !include mqtt_ble.yaml
+  interval_keepalive: !include interval_keepalive.yaml

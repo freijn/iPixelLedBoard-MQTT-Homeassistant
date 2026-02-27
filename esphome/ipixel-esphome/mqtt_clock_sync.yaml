@@ -1,0 +1,40 @@
+mqtt:
+  on_message:
+    - topic: ipixel/matrix1/clock_sync/set
+      qos: 0
+      then:
+        - lambda: !lambda |-
+            auto now = id(esptime).now();
+            if (!now.is_valid()) {
+              ESP_LOGW("ipixel_clock_sync",
+                       "Time not synced yet — skipping.");
+              return;
+            }
+
+            int year    = now.year;
+            int month   = now.month;
+            int day     = now.day_of_month;
+            int hour    = now.hour;
+            int minute  = now.minute;
+            int second  = now.second;
+            int weekday = now.day_of_week;
+
+            id(clock_sync_payload).clear();
+            id(clock_sync_payload).push_back(0x0A);
+            id(clock_sync_payload).push_back(0x00);
+            id(clock_sync_payload).push_back(0x03);
+            id(clock_sync_payload).push_back(0x81);
+
+            id(clock_sync_payload).push_back((uint8_t) year);
+            id(clock_sync_payload).push_back((uint8_t) (year >> 8));
+            id(clock_sync_payload).push_back((uint8_t) month);
+            id(clock_sync_payload).push_back((uint8_t) day);
+            id(clock_sync_payload).push_back((uint8_t) hour);
+            id(clock_sync_payload).push_back((uint8_t) minute);
+            id(clock_sync_payload).push_back((uint8_t) second);
+            id(clock_sync_payload).push_back((uint8_t) weekday);
+
+            ESP_LOGI("ipixel_clock_sync",
+                     "Built clock sync payload: %d bytes",
+                     (int) id(clock_sync_payload).size());
+        - script.execute: send_clock_sync_ble

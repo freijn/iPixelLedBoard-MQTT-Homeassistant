@@ -1,0 +1,58 @@
+# ---- AUTODISCOVERY ----
+interval:
+  - interval: 5s
+    then:
+
+      # ========== BLE CONNECT BUTTON ==========
+      - mqtt.publish:
+          topic: homeassistant/button/ipixel_matrix1_ble_connect/config
+          payload: |-
+            {
+              "name": "iPixel Matrix 1 - Connect",
+              "unique_id": "ipixel_matrix1_ble_connect",
+              "command_topic": "ipixel/matrix1/ble/cmd",
+              "payload_press": "connect",
+              "device": {
+                "identifiers": ["ipixel_matrix1"],
+                "name": "iPixel Matrix 1",
+                "manufacturer": "iPixel",
+                "model": "BLE-MQTT Display"
+              }
+            }
+          retain: true
+
+
+      # ========== BLE DISCONNECT BUTTON ==========
+      - mqtt.publish:
+          topic: homeassistant/button/ipixel_matrix1_ble_disconnect/config
+          payload: |-
+            {
+              "name": "iPixel Matrix 1 - Disconnect",
+              "unique_id": "ipixel_matrix1_ble_disconnect",
+              "command_topic": "ipixel/matrix1/ble/cmd",
+              "payload_press": "disconnect",
+              "device": {
+                "identifiers": ["ipixel_matrix1"]
+              }
+            }
+          retain: true
+
+
+      # ========== BLE STATUS (binary_sensor) ==========
+      - mqtt.publish:
+          topic: homeassistant/sensor/ipixel_matrix1_ble_status/config
+          payload: |-
+            {
+              "name": "iPixel Matrix 1 BLE Status",
+              "unique_id": "ipixel_matrix1_ble_status",
+              "state_topic": "ipixel/matrix1/ble/status",
+              "icon": "mdi:bluetooth",
+              "device": {
+                "identifiers": ["ipixel_matrix1"],
+                "name": "iPixel Matrix 1",
+                "manufacturer": "iPixel",
+                "model": "BLE-MQTT Display"
+              }
+            }
+          retain: true
+

@@ -1,0 +1,9 @@
+mqtt:
+  on_message:
+    - topic: ipixel/matrix1/clock/set
+      qos: 0
+      then:
+        - lambda: !lambda |-
+            ESP_LOGD("ipixel_clock",
+                     "Clock config '%s' (not implemented yet)",
+                     x.c_str());

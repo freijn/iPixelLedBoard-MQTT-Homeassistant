@@ -1,0 +1,19 @@
+mqtt:
+  on_message:
+    - topic: ipixel/matrix1/brightness/set
+      qos: 0
+      then:
+        - lambda: |-
+            int value = atoi(x.c_str());
+            value = std::max(0, std::min(100, value));
+            uint8_t b = (uint8_t)value;
+
+            ESP_LOGD("ipixel_brightness",
+              "Brightness payload '%s' -> %d", x.c_str(), value);
+
+            // ORIGINAL WORKING COMMAND
+            std::vector<uint8_t> cmd = {
+              0x05, 0x00, 0x04, 0x80, b
+            };
+
+            id(send_direct_ble).execute(cmd);

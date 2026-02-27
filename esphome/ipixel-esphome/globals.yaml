@@ -1,0 +1,92 @@
+globals:
+  # ---------------------------
+  # BLE Connectie status
+  # ---------------------------
+  - id: ipixel_ble_desired_connected
+    type: bool
+    restore_value: true
+    initial_value: "false"
+
+  - id: ipixel_ble_error_count
+    type: int
+    restore_value: false
+    initial_value: "0"
+
+  # ---------------------------
+  # TEXT FRAME BUFFER
+  # ---------------------------
+  - id: text_frame_buffer
+    type: std::vector<uint8_t>
+    restore_value: false
+
+  - id: text_frame_pos
+    type: int
+    restore_value: false
+    initial_value: "0"
+
+  - id: text_frame_len
+    type: int
+    restore_value: false
+    initial_value: "0"
+
+  # ---------------------------
+  # TEXT PARAMETERS
+  # ---------------------------
+  - id: ipixel_text_message
+    type: std::string
+    restore_value: true
+    initial_value: ""
+
+  - id: ipixel_text_animation
+    type: int
+    restore_value: true
+    initial_value: "0"
+
+  - id: ipixel_text_speed
+    type: int
+    restore_value: true
+    initial_value: "40"
+
+  - id: ipixel_text_rainbow
+    type: int
+    restore_value: true
+    initial_value: "0"
+
+  - id: ipixel_text_height
+    type: int
+    restore_value: true
+    initial_value: "16"
+
+  - id: ipixel_text_save_slot
+    type: int
+    restore_value: true
+    initial_value: "1"
+
+  # ---------------------------
+  # TEXT COLOR (R,G,B)
+  # ---------------------------
+  - id: ipixel_text_r
+    type: int
+    restore_value: true
+    initial_value: "255"
+
+  - id: ipixel_text_g
+    type: int
+    restore_value: true
+    initial_value: "255"
+
+  - id: ipixel_text_b
+    type: int
+    restore_value: true
+    initial_value: "255"
+
+  # ---------------------------
+  # PNG / Clock
+  # ---------------------------
+  - id: png_command
+    type: std::vector<uint8_t>
+    restore_value: false
+
+  - id: clock_sync_payload
+    type: std::vector<uint8_t>
+    restore_value: false

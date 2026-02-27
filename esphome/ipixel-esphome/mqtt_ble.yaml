@@ -1,0 +1,58 @@
+mqtt:
+  on_message:
+    - topic: ipixel/matrix1/ble/cmd
+      qos: 0
+      then:
+        - lambda: |-
+            std::string cmd = x.c_str();
+            ESP_LOGI("ipixel_ble", "MQTT BLE command '%s'", cmd.c_str());
+
+            // ---- CONNECT ----
+            if (cmd == "connect" || cmd == "CONNECT" ||
+                cmd == "on"      || cmd == "ON") {
+
+              id(ipixel_ble_desired_connected) = true;
+              id(ipixel_ble_error_count) = 0;
+
+              if (!id(ble_matrix).connected()) {
+                id(ble_matrix).connect();
+              }
+            }
+
+            // ---- DISCONNECT ----
+            else if (cmd == "disconnect" || cmd == "DISCONNECT" ||
+                     cmd == "off"        || cmd == "OFF") {
+
+              id(ipixel_ble_desired_connected) = false;
+              id(ipixel_ble_error_count) = 0;
+
+              if (id(ble_matrix).connected()) {
+                id(ble_matrix).disconnect();
+              }
+            }
+
+            // ---- INIT SEQUENCE ----
+            else if (cmd == "init" || cmd == "INIT") {
+              ESP_LOGI("ipixel_ble", "Running BLE init sequence");
+              id(ipixel_send_welcome).execute();
+            }
+
+            // ---- MANUAL KEEPALIVE ----
+            else if (cmd == "keepalive") {
+              ESP_LOGD("ipixel_ble", "Manual BLE keepalive");
+              id(send_ble_keepalive).execute();
+            }
+
+            // ---- UNKNOWN ----
+            else {
+              ESP_LOGW("ipixel_ble", "Unknown BLE cmd '%s'", cmd.c_str());
+            }
+
+        # Always publish BLE connection status after command
+        - mqtt.publish:
+            topic: ipixel/matrix1/ble/status
+            payload: !lambda |-
+              if (id(ble_matrix).connected()) return "connected";
+              if (id(ipixel_ble_desired_connected)) return "connecting";
+              return "disconnected";
+            retain: true

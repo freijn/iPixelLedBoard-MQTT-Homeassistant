@@ -1,0 +1,11 @@
+interval:
+  - interval: 30s
+    startup_delay: 0s
+    then:
+      - if:
+          condition:
+            and:
+              - lambda: "return id(ipixel_ble_desired_connected);"
+              - lambda: "return id(ble_matrix).connected();"
+          then:
+            - script.execute: send_ble_keepalive

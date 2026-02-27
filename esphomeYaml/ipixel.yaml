@@ -1,0 +1,126 @@
+esphome:
+  name: ipixel-esphome
+  friendly_name: iPixel Matrix 1
+  includes:
+    - ipixel-esphome/ipixel_text.h
+    - ipixel-esphome/ipixel_text_v2.h
+    - ipixel-esphome/ipixel_ble_writer.h
+    - ipixel-esphome/Font.h
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+
+# --- LOGGING ---
+logger:
+#  level: DEBUG
+
+# --- WIFI ---
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  manual_ip:
+    static_ip: 192.168.1.211
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+  min_auth_mode: WPA2
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: Ipixel-Esphome Fallback Hotspot
+    password: ditisgeheim 
+
+
+ota:
+  - platform: esphome
+    password: "997836568c144fd29d4239eca56d9e9c"
+
+# --- MQTT ---
+mqtt:
+  id: mqtt_client     # <-- toevoegen!
+  broker: !secret mqtt_host
+  username: !secret mqtt_user
+  password: !secret mqtt_pass
+  discovery: False
+  birth_message:
+    topic: ipixel/matrix1/status
+    payload: "online"
+    retain: true
+  will_message:
+    topic: ipixel/matrix1/status
+    payload: "offline"
+    retain: true
+
+
+# --- API / OTA ---
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+  - platform: sntp
+    id: esptime
+
+# ---- BLE (client only!) ----
+esp32_ble:
+
+esp32_ble_tracker:
+  scan_parameters:
+    continuous: false   # or true
+    interval: 320ms
+    window: 30ms
+
+ble_client:
+  - id: ble_matrix
+    mac_address: !secret ipixel_ble_mac
+    auto_connect: false
+
+    on_connect:
+      then:
+        - lambda: |-
+            ESP_LOGI("ipixel_ble", "Connected");
+            id(ipixel_ble_error_count) = 0;
+            id(ipixel_ble_desired_connected) = true;
+
+        # --- PUBLICEREN NAAR HOME ASSISTANT ---
+        - mqtt.publish:
+            topic: ipixel/matrix1/ble/status
+            payload: "connected"
+            retain: true
+
+        # --- Jouw welcome command blijft ---
+        - script.execute: ipixel_send_welcome
+
+    on_disconnect:
+      then:
+        - lambda: |-
+            ESP_LOGW("ipixel_ble", "Disconnected");
+            id(ipixel_ble_desired_connected) = false;
+
+        # --- PUBLICEREN NAAR HOME ASSISTANT ---
+        - mqtt.publish:
+            topic: ipixel/matrix1/ble/status
+            payload: "disconnected"
+            retain: true
+
+
+# ---- PACKAGES ----
+packages:
+  globals: !include ipixel-esphome/globals.yaml
+  scripts: !include ipixel-esphome/scripts.yaml
+  mqtt_text: !include ipixel-esphome/mqtt_text.yaml
+  mqtt_power: !include ipixel-esphome/mqtt_power.yaml
+  mqtt_brightness: !include ipixel-esphome/mqtt_brightness.yaml
+  mqtt_png: !include ipixel-esphome/mqtt_png.yaml
+  mqtt_clock: !include ipixel-esphome/mqtt_clock.yaml
+  mqtt_clock_sync: !include ipixel-esphome/mqtt_clock_sync.yaml
+  mqtt_ble: !include ipixel-esphome/mqtt_ble.yaml
+  interval_keepalive: !include ipixel-esphome/interval_keepalive.yaml
+  autodisc: !include ipixel-esphome/autodiscovery.yaml
+  

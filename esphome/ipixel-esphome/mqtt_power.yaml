@@ -1,0 +1,23 @@
+mqtt:
+  on_message:
+    - topic: ipixel/matrix1/power/set
+      qos: 0
+      then:
+        - lambda: |-
+            bool on = (x == "ON" || x == "on" || x == "1" ||
+                       x == "true" || x == "TRUE");
+
+            ESP_LOGD("ipixel_power",
+                     "Power payload '%s' -> %s",
+                     x.c_str(), on ? "ON" : "OFF");
+
+            // ✔ ORIGINAL WORKING POWER COMMAND
+            std::vector<uint8_t> cmd = {
+              0x05,
+              0x00,
+              0x07,    // <-- NOT 04, NOT 80, but 07
+              0x01,    // <-- POWER opcode
+              static_cast<uint8_t>(on ? 1 : 0)
+            };
+
+            id(send_direct_ble).execute(cmd);

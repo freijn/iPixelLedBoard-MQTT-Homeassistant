@@ -1,0 +1,93 @@
+mqtt:
+  on_message:
+    - topic: ipixel/matrix1/text/set
+      qos: 0
+      then:
+        - lambda: |-
+            std::string msg = x.c_str();
+            if (msg.empty()) {
+              ESP_LOGW("ipixel_text", "text/set: empty message ignored");
+              return;
+            }
+            id(ipixel_text_message) = msg;
+            ESP_LOGD("ipixel_text", "text/set: message set to '%s'", msg.c_str());
+        - script.execute: ipixel_text_apply
+
+    - topic: ipixel/matrix1/text/animation
+      qos: 0
+      then:
+        - lambda: |-
+            int val = atoi(x.c_str());
+            if (val < 0) val = 0;
+            if (val > 7) val = 7;
+            id(ipixel_text_animation) = val;
+        - script.execute: ipixel_text_apply
+
+    - topic: ipixel/matrix1/text/speed
+      qos: 0
+      then:
+        - lambda: |-
+            int val = atoi(x.c_str());
+            if (val < 0) val = 0;
+            if (val > 100) val = 100;
+            id(ipixel_text_speed) = val;
+        - script.execute: ipixel_text_apply
+
+    - topic: ipixel/matrix1/text/rainbow
+      qos: 0
+      then:
+        - lambda: |-
+            int val = atoi(x.c_str());
+            if (val < 0) val = 0;
+            if (val > 9) val = 9;
+            id(ipixel_text_rainbow) = val;
+        - script.execute: ipixel_text_apply
+
+    - topic: ipixel/matrix1/text/save_slot
+      qos: 0
+      then:
+        - lambda: |-
+            int val = atoi(x.c_str());
+            if (val < 1) val = 1;
+            if (val > 10) val = 10;
+            id(ipixel_text_save_slot) = val;
+        - script.execute: ipixel_text_apply
+
+    - topic: ipixel/matrix1/text/height
+      qos: 0
+      then:
+        - lambda: |-
+            int val = atoi(x.c_str());
+            if (val < 0) val = 0;
+            if (val > 255) val = 255;
+            id(ipixel_text_height) = val;
+        - script.execute: ipixel_text_apply
+
+    # OLD WORKING COLOR FORMAT (R,G,B)
+    - topic: ipixel/matrix1/text/color
+      qos: 0
+      then:
+        - lambda: |-
+            std::string payload = x.c_str();
+            int r = 255, g = 255, b = 255;
+
+            if (sscanf(payload.c_str(), "%d,%d,%d", &r, &g, &b) != 3) {
+              ESP_LOGW("ipixel_text", "text/color invalid '%s'", payload.c_str());
+              return;
+            }
+
+            r = std::max(0, std::min(255, r));
+            g = std::max(0, std::min(255, g));
+            b = std::max(0, std::min(255, b));
+
+            id(ipixel_text_r) = r;
+            id(ipixel_text_g) = g;
+            id(ipixel_text_b) = b;
+
+            ESP_LOGD("ipixel_text", "color -> %d,%d,%d", r, g, b);
+        - script.execute: ipixel_text_apply
+
+    - topic: ipixel/matrix1/text/apply
+      qos: 0
+      then:
+        - script.execute: ipixel_text_apply

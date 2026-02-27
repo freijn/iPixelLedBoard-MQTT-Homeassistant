@@ -1,0 +1,10 @@
+mqtt:
+  on_message:
+    - topic: ipixel/matrix1/png/set
+      qos: 0
+      then:
+        - lambda: !lambda |-
+            id(png_command).clear();
+            ESP_LOGD("ipixel_png", "png/set: payload length %d bytes", (int) x.length());
+            // TODO: PNG encoder naar BLE frame
+        - script.execute: send_png_ble

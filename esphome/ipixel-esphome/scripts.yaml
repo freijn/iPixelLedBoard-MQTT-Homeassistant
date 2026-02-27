@@ -1,0 +1,226 @@
+script:
+
+  # -------------------------------------------------
+  # DIRECT WRITE via ipixel_ble_writer (FA02)
+  # -------------------------------------------------
+  - id: send_direct_ble
+    mode: restart
+    parameters:
+      cmd: std::vector<uint8_t>
+    then:
+      - lambda: |-
+          if (id(ble_matrix) == nullptr) {
+            ESP_LOGW("ipixel_ble_writer", "send_direct_ble: BLE client not ready");
+            return;
+          }
+          ipixel_ble_writer::write_cmd(id(ble_matrix), cmd);
+
+  # -------------------------------------------------
+  # PNG SEND
+  # -------------------------------------------------
+  - id: send_png_ble
+    mode: restart
+    then:
+      - lambda: |-
+          int sz = (int) id(png_command).size();
+          {
+            char b[80];
+            snprintf(b, sizeof(b), "send_png_ble: sending %d bytes", sz);
+            ESP_LOGI("ipixel_png", "%s", b);
+          }
+          if (id(ble_matrix) == nullptr) {
+            ESP_LOGW("ipixel_ble_writer", "send_png_ble: BLE client not ready");
+            return;
+          }
+          ipixel_ble_writer::write_cmd(id(ble_matrix), id(png_command));
+
+  # -------------------------------------------------
+  # APPLY TEXT (v2)
+  # -------------------------------------------------
+  - id: ipixel_text_apply
+    mode: restart
+    then:
+      - lambda: |-
+          std::string msg = id(ipixel_text_message);
+          if (msg.empty()) {
+            ESP_LOGW("ipixel_text", "ipixel_text_apply: empty message, ignoring");
+            return;
+          }
+
+          int height    = id(ipixel_text_height);
+          int animation = id(ipixel_text_animation);
+          int rainbow   = id(ipixel_text_rainbow);
+          int slot      = id(ipixel_text_save_slot);
+          int speed     = id(ipixel_text_speed);
+
+          int r = id(ipixel_text_r);
+          int g = id(ipixel_text_g);
+          int b = id(ipixel_text_b);
+
+          std::vector<uint8_t> frame = ipixel::build_text_frame_v2(
+              msg,
+              animation,
+              slot,
+              speed,
+              (uint8_t) r,
+              (uint8_t) g,
+              (uint8_t) b,
+              rainbow,
+              height
+          );
+
+          {
+            char buf[120];
+            snprintf(buf, sizeof(buf), "apply: msg='%s', len=%d", msg.c_str(), (int) frame.size());
+            ESP_LOGD("ipixel_text", "%s", buf);
+          }
+
+          id(text_frame_buffer) = frame;
+          id(text_frame_len)    = (int) frame.size();
+          id(text_frame_pos)    = 0;
+
+      - script.execute:
+          id: send_text_ble_frame
+
+  # -------------------------------------------------
+  # SEND TEXT FRAME
+  # -------------------------------------------------
+  - id: send_text_ble_frame
+    mode: queued
+    max_runs: 10
+    then:
+      - lambda: |-
+          if (id(ble_matrix) == nullptr) {
+            ESP_LOGW("ipixel_text", "send_text_ble_frame: BLE not ready");
+            return;
+          }
+
+          auto &buf = id(text_frame_buffer);
+          int len_i = id(text_frame_len);
+          int pos_i = id(text_frame_pos);
+
+          if (len_i <= 0) {
+            ESP_LOGW("ipixel_text", "send_text_ble_frame: empty buffer");
+            return;
+          }
+          if (pos_i >= len_i) {
+            ESP_LOGD("ipixel_text", "send_text_ble_frame: done");
+            return;
+          }
+
+          size_t len   = (size_t) len_i;
+          size_t pos   = (size_t) pos_i;
+          size_t chunk = std::min<size_t>(512, len - pos);
+
+          {
+            char buf2[64];
+            snprintf(buf2, sizeof(buf2), "Sending %u bytes", (unsigned)chunk);
+            ESP_LOGD("ipixel_text", "%s", buf2);
+          }
+
+          std::vector<uint8_t> part(buf.begin() + pos, buf.begin() + pos + chunk);
+          ipixel_ble_writer::write_cmd(id(ble_matrix), part);
+
+          pos += chunk;
+          id(text_frame_pos) = (int) pos;
+
+          if (pos < len) {
+            id(send_text_ble_frame).execute();
+          }
+
+  # -------------------------------------------------
+  # REAL KEEPALIVE (12 bytes, protocol-correct)
+  # -------------------------------------------------
+  - id: ipixel_keepalive_send
+    mode: restart
+    then:
+      - lambda: |-
+          if (id(ble_matrix) == nullptr) {
+            ESP_LOGW("ipixel_keepalive", "BLE client not ready, skip keepalive");
+            return;
+          }
+
+          // REAL iPixel KEEPALIVE
+          std::vector<uint8_t> frame = {
+              0x0A, 0x00,      // header
+              0x03, 0x82,      // opcode = keepalive
+              0x00, 0x00, 0x00, 0x00,
+              0x00, 0x00, 0x00, 0x00
+          };
+
+          ESP_LOGD("ipixel_keepalive", "Sending REAL keepalive frame");
+          ipixel_ble_writer::write_cmd(id(ble_matrix), frame);
+
+  # -------------------------------------------------
+  # CLOCK SYNC (protocol-correct)
+  # -------------------------------------------------
+  - id: ipixel_clock_sync
+    mode: restart
+    then:
+      - lambda: |-
+          auto ha_time = id(homeassistant_time).now();
+          if (ha_time.is_valid()) {
+
+            id(clock_sync_payload).clear();
+
+            // REAL clock-sync header
+            id(clock_sync_payload).push_back(0x0A);
+            id(clock_sync_payload).push_back(0x00);
+            id(clock_sync_payload).push_back(0x03);
+            id(clock_sync_payload).push_back(0x81); // opcode = time sync
+
+            // payload: year LE, month, day, hour, minute, second, weekday
+            id(clock_sync_payload).push_back((uint8_t) ha_time.year);
+            id(clock_sync_payload).push_back((uint8_t) (ha_time.year >> 8));
+            id(clock_sync_payload).push_back((uint8_t) ha_time.month);
+            id(clock_sync_payload).push_back((uint8_t) ha_time.day_of_month);
+            id(clock_sync_payload).push_back((uint8_t) ha_time.hour);
+            id(clock_sync_payload).push_back((uint8_t) ha_time.minute);
+            id(clock_sync_payload).push_back((uint8_t) ha_time.second);
+            id(clock_sync_payload).push_back((uint8_t) ha_time.day_of_week);
+
+            ESP_LOGD("ipixel_clock", "ipixel_clock_sync: REAL clock payload built");
+          } else {
+            ESP_LOGD("ipixel_clock", "ipixel_clock_sync: homeassistant time invalid, skipping");
+          }
+
+  # -------------------------------------------------
+  # CLOCK SYNC → BLE
+  # -------------------------------------------------
+  - id: send_clock_sync_ble
+    mode: restart
+    then:
+      - lambda: |-
+          if (id(ble_matrix) == nullptr) {
+            ESP_LOGW("ipixel_clock", "send_clock_sync_ble: BLE not ready");
+            return;
+          }
+          if (id(clock_sync_payload).empty()) {
+            ESP_LOGW("ipixel_clock", "send_clock_sync_ble: payload empty");
+            return;
+          }
+
+          ESP_LOGD("ipixel_clock", "send_clock_sync_ble: sending %d bytes", (int) id(clock_sync_payload).size());
+          ipixel_ble_writer::write_cmd(id(ble_matrix), id(clock_sync_payload));
+
+  # -------------------------------------------------
+  # WELCOME
+  # (VEILIG, want clock-sync is nu correct)
+  # -------------------------------------------------
+  - id: ipixel_send_welcome
+    mode: restart
+    then:
+      - logger.log:
+          tag: ipixel_ble
+          level: INFO
+          format: "Welcome sequence triggered"
+      - script.execute: ipixel_clock_sync
+      - script.execute: send_clock_sync_ble
+
+  # -------------------------------------------------
+  # MANUAL KEEPALIVE (same as real keepalive)
+  # -------------------------------------------------
+  - id: send_ble_keepalive
+    mode: restart
+    then:
+      - script.execute: ipixel_keepalive_send
