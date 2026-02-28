@@ -72,7 +72,7 @@ Required for this project:
 
 ```
 
-- update your sercrets.yaml as per template from 'esphomeYaml/sercrets.yaml'
+- update your secrets.yaml as per template from 'esphomeYaml/secrets.yaml'
    worth nothing to mention you must change the info according to your local environement.
    The iPixel Bluetooth mac address can be found in your mobile phone after a successfull connection
 
