@@ -8,7 +8,7 @@ Intial project done by https://github.com/lucagoc/pypixelcolor
 
 [![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
 
-[![iPixel board](https://github.com/freijn/iPixel-MQTT-Homeassistant/blob/main/pictures/ipixel.jpeg)
+[![iPixel board](https://github.com/freijn/iPixelLedBoard-MQTT-Homeassistant/blob/main/pictures/ipixel.jpeg)
 
 iPixel is a led board from china (sold by Action) and originally controlled/programmed by an app on you phone.
 As always you connect your phone via Bluetooht to the board. 
@@ -89,7 +89,7 @@ Then goto settings >>
 
 
 
- ![Card screenshot](https://github.com/freijn/iPixel-MQTT-Homeassistant/blob/main/pictures/ipixelcard.JPG)
+ ![Card screenshot](https://github.com/freijn/iPixelLedBoard-MQTT-Homeassistant/blob/main/pictures/ipixelcard.JPG)
 
 
 
